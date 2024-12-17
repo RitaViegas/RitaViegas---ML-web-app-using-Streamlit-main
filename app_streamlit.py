@@ -4,7 +4,6 @@ import os
 from gtts import gTTS
 from huggingface_hub import hf_hub_download
 import joblib
-import numpy as np
 
 # Multilingual dictionary for translations
 translations = {
@@ -21,6 +20,11 @@ translations = {
     "recommendation_success": {"en": "✨ Here are your movie recommendations:", "es": "✨ Aquí están tus recomendaciones de películas:", "pt": "✨ Aqui estão suas recomendações de filmes:"},
     "no_recommendations": {"en": "⚠ No recommendations found for the selected genre.", "es": "⚠ No se encontraron recomendaciones para el género seleccionado.", "pt": "⚠ Nenhuma recomendação encontrada para o gênero selecionado."},
     "footer": {"en": "📽️ Movie Recommendation System", "es": "📽️ Sistema de Recomendación de Películas", "pt": "📽️ Sistema de Recomendação de Filmes"},
+    "genres": {
+        "en": ["Comedy", "Horror", "Science Fiction", "Action", "Thriller", "Mystery", "Documentary"],
+        "es": ["Comedia", "Terror", "Ciencia Ficción", "Acción", "Suspense", "Misterio", "Documental"],
+        "pt": ["Comédia", "Terror", "Ficção Científica", "Ação", "Thriller", "Mistério", "Documentário"],
+    }
 }
 
 # Function to play audio
@@ -49,11 +53,43 @@ def load_model(repo_id, filename, repo_type="model"):
         st.error(f"❌ Error loading `{filename}`. Details: {e}")
         return None
 
-# Function to simulate movie recommendations
+# Centralized mapping of genres to Portuguese (keys in 'movies')
+genre_mapping = {
+    "en": {
+        "Comedy": "Comédia", 
+        "Horror": "Terror", 
+        "Science Fiction": "Ficção Científica", 
+        "Action": "Ação", 
+        "Thriller": "Thriller", 
+        "Mystery": "Mistério", 
+        "Documentary": "Documentário"
+    },
+    "es": {
+        "Comedia": "Comédia", 
+        "Terror": "Terror", 
+        "Ciencia Ficción": "Ficção Científica", 
+        "Acción": "Ação", 
+        "Suspense": "Thriller", 
+        "Misterio": "Mistério", 
+        "Documental": "Documentário"
+    },
+    "pt": {
+        "Comédia": "Comédia", 
+        "Terror": "Terror", 
+        "Ficção Científica": "Ficção Científica", 
+        "Ação": "Ação", 
+        "Thriller": "Thriller", 
+        "Mistério": "Mistério", 
+        "Documentário": "Documentário"
+    }
+}
+
+# Updated function to simulate movie recommendations
 def generate_recommendations(genre, vectorizer, similarity, lang_key):
     try:
         st.info(translations["loading_model"][lang_key])
-        # Simulating movie data
+        
+        # Simulated movie data (Portuguese keys only)
         movies = {
             "Comédia": ["Superbad", "The Hangover", "Jumanji"],
             "Terror": ["The Conjuring", "Insidious", "Get Out"],
@@ -61,10 +97,15 @@ def generate_recommendations(genre, vectorizer, similarity, lang_key):
             "Ação": ["Fast & Furious", "John Wick", "Mad Max"],
             "Thriller": ["Gone Girl", "Prisoners", "The Girl with the Dragon Tattoo"],
             "Mistério": ["Knives Out", "Sherlock Holmes", "The Prestige"],
-            "Documentário": ["The Social Dilemma", "Planet Earth", "13th"],
+            "Documentário": ["The Social Dilemma", "Planet Earth", "13th"]
         }
-        # Filtering recommendations based on genre
-        recommendations = movies.get(genre, [])
+
+        # Map the translated genre to Portuguese
+        genre_in_pt = genre_mapping[lang_key].get(genre, "")
+        
+        # Get recommendations
+        recommendations = movies.get(genre_in_pt, [])
+        
         if recommendations:
             st.success(translations["recommendation_success"][lang_key])
             for movie in recommendations:
@@ -77,8 +118,8 @@ def generate_recommendations(genre, vectorizer, similarity, lang_key):
 # Streamlit Main Interface
 # Language selection
 language = st.sidebar.selectbox("🌐 Choose your language:", ["English", "Español", "Português"])
-lang_key = {"English": "en", "Español": "es", "Português": "pt"}[language]
-lang_code = {"en": "en", "es": "es", "pt": "pt"}[lang_key]
+lang_code = {"English": "en", "Español": "es", "Português": "pt"}[language]
+current_lang = lang_code
 
 # Load models
 repo_id_vectorizer = "RitaViegas/vectorizer.pkl"
@@ -90,25 +131,26 @@ similarity = load_model(repo_id_similarity, "similarity.pkl")
 if vectorizer is None or similarity is None:
     st.stop()
 
-st.title(translations["title"][lang_key])
-st.markdown(translations["description"][lang_key])
+st.title(translations["title"][current_lang])
+st.markdown(translations["description"][current_lang])
 
 # Movie genre options
-genres = ["Comédia", "Terror", "Ficção Científica", "Ação", "Thriller", "Mistério", "Documentário"]
-selected_genre = st.selectbox(translations["choose_genre"][lang_key], genres)
+# Movie genre options
+genres = translations["genres"][current_lang]  # Gêneros traduzidos
+selected_genre = st.selectbox(translations["choose_genre"][current_lang], genres)
 
 # Play audio of the selected genre
-st.write(translations["play_audio"][lang_key])
+st.write(translations["play_audio"][current_lang])
 play_audio(f"Você escolheu o gênero {selected_genre}", lang_code)
 
 # Generate recommendations
-if st.button(translations["get_recommendations"][lang_key]):
-    generate_recommendations(selected_genre, vectorizer, similarity, lang_key)
+if st.button(translations["get_recommendations"][current_lang]):
+    generate_recommendations(selected_genre, vectorizer, similarity, current_lang)
 
 cleanup_audio()
 
 st.markdown("---")
-st.caption(translations["footer"][lang_key])
+st.caption(translations["footer"][current_lang])
 
 
 
